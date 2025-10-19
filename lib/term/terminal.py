@@ -8,7 +8,7 @@ import os
 import json
 import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple
 
 import lib.banner
 import lib.settings
@@ -92,7 +92,7 @@ class AutoSploitTerminal:
                         tmp.append(item.strip())
             except (IOError, Exception):
                 pass
-            
+
             if len(tmp) == 0:
                 lib.output.warning("currently no history")
             elif len(tmp) > max_memory:
@@ -125,7 +125,7 @@ class AutoSploitTerminal:
             choice_checker = original_choice.split(" ")[0]
         except IndexError:
             choice_checker = original_choice
-        
+
         if choice_checker in self.internal_terminal_commands:
             retval = ("internal", original_choice)
         elif choice_checker in self.external_terminal_commands:
@@ -153,11 +153,11 @@ class AutoSploitTerminal:
         for host in self.loaded_hosts:
             retval.add(host)
         cleaned_size = len(retval)
-        
+
         with open(lib.settings.HOST_FILE, 'w', encoding='utf-8') as hosts:
             for item in retval:
                 hosts.write(item)
-        
+
         if current_size != cleaned_size:
             lib.output.info(f"cleaned {current_size - cleaned_size} duplicate IP address(es) (total of {cleaned_size})")
         self.__reload()
@@ -212,7 +212,9 @@ class AutoSploitTerminal:
         search shodan windows 7
         """
         acceptable_api_names = ("shodan", "censys", "zoomeye")
-        api_checker = lambda l: all(i.lower() in acceptable_api_names for i in l)
+
+        def api_checker(api_list):
+            return all(i.lower() in acceptable_api_names for i in api_list)
 
         try:
             if len(query) < 1:

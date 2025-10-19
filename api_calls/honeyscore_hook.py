@@ -4,7 +4,6 @@ AutoSploit Honeyscore Hook Module
 Modernized for Python 3.12
 """
 
-from typing import Dict
 
 import requests
 
@@ -25,8 +24,8 @@ class HoneyHook:
         """Make a request to get the honeyscore for an IP address."""
         try:
             req = requests.get(
-                self.url.format(ip=self.ip, key=self.api_key), 
-                headers=self.headers, 
+                self.url.format(ip=self.ip, key=self.api_key),
+                headers=self.headers,
                 timeout=30
             )
             req.raise_for_status()

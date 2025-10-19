@@ -75,7 +75,7 @@ def parse_nmap_args(args: List[str]) -> List[str]:
             known_args = [a.strip() for a in f.readlines()]
     except FileNotFoundError:
         known_args = []
-    
+
     for arg in args:
         if " " in arg:
             tmparg = arg.split(" ")[0]
@@ -97,9 +97,9 @@ def write_data(host: str, output: str, is_xml: bool = True) -> str:
     """Dump XML data to a file."""
     backup_path = lib.settings.NMAP_XML_OUTPUT_BACKUP if is_xml else lib.settings.NMAP_JSON_OUTPUT_BACKUP
     Path(backup_path).mkdir(parents=True, exist_ok=True)
-    
+
     file_path = str(Path(backup_path) / f"{host}_{lib.jsonize.random_file_name(length=10)}.{'xml' if is_xml else 'json'}")
-    
+
     with open(file_path, 'a+', encoding='utf-8') as results:
         if is_xml:
             results.write(output)
@@ -163,11 +163,11 @@ def parse_xml_output(output: str, warnings: str, error: str) -> Dict[str, Any]:
             raise lib.errors.NmapScannerError(error)
         else:
             raise lib.errors.NmapScannerError(output)
-    
+
     # Safely get scan stats
     finished_elem = root.find('runstats/finished')
     hosts_elem = root.find('runstats/hosts')
-    
+
     results['nmap_scan'] = {
         'full_command_line': root.get('args'),
         'scan_information': {},

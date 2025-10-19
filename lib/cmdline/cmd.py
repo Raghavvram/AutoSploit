@@ -9,7 +9,7 @@ import sys
 import random
 import argparse
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Tuple
 
 import lib.output
 import lib.jsonize
@@ -185,7 +185,7 @@ class AutoSploitParser(argparse.ArgumentParser):
             except FileNotFoundError:
                 lib.output.error("Links file not found")
                 return
-            
+
             for module in modules_to_download:
                 searcher = re.compile(module)
                 for link in possibles:

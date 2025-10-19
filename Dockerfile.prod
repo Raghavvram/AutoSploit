@@ -1,0 +1,32 @@
+# Stage 1: Build the virtual environment
+FROM python:3.12-slim as builder
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the requirements file
+COPY requirements.txt .
+
+# Create a virtual environment
+RUN python -m venv /app/venv
+
+# Install the dependencies
+RUN /app/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Create the production image
+FROM python:3.12-slim
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /app/venv ./venv
+
+# Copy the application code
+COPY . .
+
+# Set the PATH to include the virtual environment's bin directory
+ENV PATH="/app/venv/bin:$PATH"
+
+# Run the application
+CMD ["python", "autosploit.py"]

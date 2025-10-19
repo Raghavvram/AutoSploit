@@ -6,9 +6,8 @@ Modernized for Python 3.12
 
 import os
 import base64
-import json
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional, Set
 
 import requests
 
@@ -27,7 +26,7 @@ class ZoomEyeAPIHook:
     so we're going to use some 'lifted' credentials to login for us
     """
 
-    def __init__(self, query: Optional[str] = None, proxy: Optional[Dict[str, str]] = None, 
+    def __init__(self, query: Optional[str] = None, proxy: Optional[Dict[str, str]] = None,
                  agent: Optional[Dict[str, str]] = None, save_mode: Optional[str] = None, **kwargs):
         self.query = query
         self.host_file = HOST_FILE

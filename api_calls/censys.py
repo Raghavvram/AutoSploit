@@ -4,7 +4,7 @@ AutoSploit Censys API Module
 Modernized for Python 3.12
 """
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional, Set
 
 import requests
 
@@ -20,8 +20,8 @@ from lib.settings import (
 class CensysAPIHook:
     """Censys API hook."""
 
-    def __init__(self, identity: Optional[str] = None, token: Optional[str] = None, 
-                 query: Optional[str] = None, proxy: Optional[Dict[str, str]] = None, 
+    def __init__(self, identity: Optional[str] = None, token: Optional[str] = None,
+                 query: Optional[str] = None, proxy: Optional[Dict[str, str]] = None,
                  agent: Optional[Dict[str, str]] = None, save_mode: Optional[str] = None, **kwargs):
         self.id = identity
         self.token = token

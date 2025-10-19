@@ -10,14 +10,9 @@ import ctypes
 import psutil
 import platform
 import traceback
-from pathlib import Path
 
 from lib.cmdline.cmd import AutoSploitParser
 from lib.term.terminal import AutoSploitTerminal
-from lib.creation.issue_creator import (
-    request_issue_creation,
-    hide_sensitive
-)
 from lib.output import (
     info,
     prompt,
@@ -31,8 +26,7 @@ from lib.settings import (
     close,
     EXPLOIT_FILES_PATH,
     START_SERVICES_PATH,
-    save_error_to_file,
-    stop_animation
+    save_error_to_file
 )
 from lib.jsonize import (
     load_exploits,
@@ -67,7 +61,7 @@ def main():
         misc_info("checking your running platform")
         platform_running = platform.system()
         misc_info("checking for disabled services")
-        
+
         # Check for required services (postgres, apache2)
         service_names = ("postgres", "apache2")
         try:
@@ -125,7 +119,7 @@ def main():
             loaded_tokens = load_api_keys()
             terminal = AutoSploitTerminal(loaded_tokens, loaded_exploits)
             terminal.terminal_main_display(loaded_tokens)
-            
+
     except Exception as e:
         global stop_animation
         stop_animation = True

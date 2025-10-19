@@ -194,7 +194,7 @@ def load_external_commands() -> List[str]:
 def backup_host_file(current: str, path: str) -> str:
     """Backup the current hosts file."""
     import datetime
-    
+
     Path(path).mkdir(parents=True, exist_ok=True)
     new_filename = str(Path(path) / f"hosts_{lib_jsonize.random_file_name(length=22)}_{datetime.date.today()}.txt")
     shutil.copy2(current, new_filename)
@@ -219,7 +219,7 @@ def validate_ip_addr(provided: str, home_ok: bool = False) -> bool:
         not_acceptable = ("0.0.0.0", "127.0.0.1", "255.255.255.255")
     else:
         not_acceptable = ("255.255.255.255",)
-    
+
     if provided not in not_acceptable:
         try:
             socket.inet_aton(provided)
@@ -239,7 +239,7 @@ def check_services(service_name: str) -> bool:
                 all_processes.add(" ".join(running_proc.cmdline()).strip())
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
-        
+
         for proc in all_processes:
             if service_name in proc:
                 return True
@@ -285,7 +285,7 @@ def write_to_file(data_to_write: Union[str, list, set, tuple], filename: str, mo
                 log.write(f"{str(item).strip()}{os.linesep}")
         else:
             log.write(str(data_to_write))
-    
+
     lib_output.info(f"successfully wrote info to '{filename}'")
     return filename
 
@@ -309,7 +309,7 @@ def load_api_keys(unattended: bool = False, path: Optional[str] = None) -> Dict[
                 log.write(access_token.strip())
         else:
             lib_output.info(f"{key.title()} API token loaded from {API_KEYS[key][0]}")
-    
+
     api_tokens = {
         "censys": (
             Path(API_KEYS["censys"][0]).read_text(encoding='utf-8').rstrip(),
@@ -434,10 +434,10 @@ def save_error_to_file(error_info: str, error_message: str, error_class: str) ->
     acceptable = string.ascii_letters
     filename = ''.join(random.choice(acceptable) for _ in range(12)) + "_AS_error.txt"
     file_path = str(Path(ERROR_FILES_LOCATION) / filename)
-    
+
     with open(file_path, "a+", encoding='utf-8') as log:
         log.write(f"Traceback (most recent call):\n {error_info.strip()}\n{error_class}: {error_message}")
-    
+
     return file_path
 
 
@@ -454,11 +454,11 @@ def download_modules(link: str) -> str:
     split_data = content.split(" ")
     searcher = re.compile(r"exploit/\w+/\w+")
     storage_file = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8')
-    
+
     for item in split_data:
         if searcher.search(item) is not None:
             retval += item + "\n"
-    
+
     storage_file.write(retval)
     storage_file.close()
     return storage_file.name
@@ -469,7 +469,7 @@ def find_similar(command: str, internal: List[str], external: List[str]) -> List
     retval = []
     if not command:
         return retval
-    
+
     first_char = command[0]
     for inter in internal:
         if inter.startswith(first_char):

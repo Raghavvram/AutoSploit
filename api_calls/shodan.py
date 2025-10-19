@@ -4,8 +4,7 @@ AutoSploit Shodan API Module
 Modernized for Python 3.12
 """
 
-import json
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional, Set
 
 import requests
 
@@ -21,8 +20,8 @@ from lib.settings import (
 class ShodanAPIHook:
     """Shodan API hook, saves us from having to install another dependency."""
 
-    def __init__(self, token: Optional[str] = None, query: Optional[str] = None, 
-                 proxy: Optional[Dict[str, str]] = None, agent: Optional[Dict[str, str]] = None, 
+    def __init__(self, token: Optional[str] = None, query: Optional[str] = None,
+                 proxy: Optional[Dict[str, str]] = None, agent: Optional[Dict[str, str]] = None,
                  save_mode: Optional[str] = None, **kwargs):
         self.token = token
         self.query = query
