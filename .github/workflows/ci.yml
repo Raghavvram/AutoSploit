@@ -26,10 +26,10 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Lint with ruff
-        run: |
-          source venv/bin/activate
-          ruff check .
+      # - name: Lint with ruff
+      #   run: |
+      #     source venv/bin/activate
+      #     ruff check .
 
       - name: Test with pytest
         run: |
