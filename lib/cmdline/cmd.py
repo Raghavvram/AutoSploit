@@ -100,9 +100,10 @@ class AutoSploitParser(argparse.ArgumentParser):
                              help="Run AutoSploit with provided exploit JSON file.")
         exploit.add_argument("-H", "--is-honeypot", type=float, default=1000, dest="checkIfHoneypot", metavar="HONEY-SCORE",
                              help="Determine if the host is a honeypot or not")
+        exploit.add_argument("--os", metavar="OS", dest="targetOS",
+                             help="specify the target device OS so that only OS specifiy exploits are ran")
 
-        misc = parser.add_argument_group("misc arguments", "arguments that don't fit anywhere else")
-        misc.add_argument("--ruby-exec", action="store_true", dest="rubyExecutableNeeded",
+        misc = parser.add_argument_group("misc arguments", "arguments that don't fit anywhere else")        misc.add_argument("--ruby-exec", action="store_true", dest="rubyExecutableNeeded",
                           help="if you need to run the Ruby executable with MSF use this")
         misc.add_argument("--msf-path", metavar="MSF-PATH", dest="pathToFramework",
                           help="pass the path to your framework if it is not in your ENV PATH")
@@ -263,13 +264,14 @@ class AutoSploitParser(argparse.ArgumentParser):
             else:
                 check_pot = False
             lib.exploitation.exploiter.AutoSploitExploiter(
-                opt.msfConfig,
-                loaded_modules,
-                hosts,
+                configuration=opt.msfConfig,
+                all_modules=loaded_modules,
+                hosts=hosts,
                 ruby_exec=opt.rubyExecutableNeeded,
                 msf_path=opt.pathToFramework,
                 dryRun=opt.dryRun,
                 shodan_token=keys["shodan"][0],
                 check_honey=check_pot,
-                compare_honey=opt.checkIfHoneypot
+                compare_honey=opt.checkIfHoneypot,
+                target_os=opt.targetOS
             ).start_exploit()
