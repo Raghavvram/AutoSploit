@@ -26,7 +26,7 @@ def check_ip_alive(ip):
         try:
             socket.inet_aton(ip)
             return True
-        except:
+        except OSError:
             return False
 
     try:

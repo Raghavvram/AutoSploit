@@ -1,8 +1,16 @@
+#!/usr/bin/env python3
+"""
+AutoSploit Main Module
+Modernized for Python 3.12
+"""
+
 import os
 import sys
 import ctypes
 import psutil
 import platform
+import traceback
+from pathlib import Path
 
 from lib.cmdline.cmd import AutoSploitParser
 from lib.term.terminal import AutoSploitTerminal
@@ -33,15 +41,23 @@ from lib.jsonize import (
 
 
 def main():
+    """Main entry point for AutoSploit."""
     try:
-
+        # Check for admin privileges
         try:
             is_admin = os.getuid() == 0
         except AttributeError:
-            # we'll make it cross platform because it seems like a cool idea
-            is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            # Cross-platform admin check for Windows
+            try:
+                is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            except AttributeError:
+                # Fallback for other platforms
+                is_admin = True  # Assume admin for non-Windows platforms
 
-        if not is_admin:
+        # Allow help, version, and dry run to be shown without admin privileges
+        if not is_admin and len(sys.argv) > 1 and any(arg in sys.argv for arg in ['--help', '-h', 'help', '--version', '-v', 'version', '--dry-run', '-d']):
+            pass  # Allow help, version, and dry run to be shown
+        elif not is_admin:
             close("must have admin privileges to run")
 
         opts = AutoSploitParser().optparser()
@@ -51,10 +67,11 @@ def main():
         misc_info("checking your running platform")
         platform_running = platform.system()
         misc_info("checking for disabled services")
-        # according to ps aux, postgre and apache2 are the names of the services on Linux systems
+        
+        # Check for required services (postgres, apache2)
         service_names = ("postgres", "apache2")
         try:
-            for service in list(service_names):
+            for service in service_names:
                 while not check_services(service):
                     if "darwin" in platform_running.lower():
                         info(
@@ -63,36 +80,31 @@ def main():
                         )
                         break
                     choice = prompt(
-                        "it appears that service {} is not enabled, would you like us to enable it for you[y/N]".format(
-                            service.title()
-                        )
+                        f"it appears that service {service.title()} is not enabled, "
+                        "would you like us to enable it for you[y/N]"
                     )
                     if choice.lower().startswith("y"):
                         try:
                             if "linux" in platform_running.lower():
-                                cmdline("{} linux".format(START_SERVICES_PATH))
+                                cmdline(f"{START_SERVICES_PATH} linux")
                             else:
                                 close("your platform is not supported by AutoSploit at this time", status=2)
 
-                            # moving this back because it was funky to see it each run
                             info("services started successfully")
-                        # this tends to show up when trying to start the services
-                        # I'm not entirely sure why, but this fixes it
                         except psutil.NoSuchProcess:
                             pass
                     else:
-                        process_start_command = "`sudo service {} start`"
+                        process_start_command = f"`sudo service {service} start`"
                         if "darwin" in platform_running.lower():
-                            process_start_command = "`brew services start {}`"
+                            process_start_command = f"`brew services start {service}`"
                         close(
-                            "service {} is required to be started for autosploit to run successfully (you can do it manually "
-                            "by using the command {}), exiting".format(
-                                service.title(), process_start_command.format(service)
-                            )
+                            f"service {service.title()} is required to be started for autosploit to run successfully "
+                            f"(you can do it manually by using the command {process_start_command}), exiting"
                         )
         except Exception:
             pass
 
+        # Handle command line arguments or start interactive mode
         if len(sys.argv) > 1:
             info("attempting to load API keys")
             loaded_tokens = load_api_keys()
@@ -103,9 +115,7 @@ def main():
                 loaded_exploits = load_exploits(EXPLOIT_FILES_PATH)
             else:
                 loaded_exploits = load_exploit_file(opts.exploitFile)
-                misc_info("Loaded {} exploits from {}.".format(
-                    len(loaded_exploits),
-                    opts.exploitFile))
+                misc_info(f"Loaded {len(loaded_exploits)} exploits from {opts.exploitFile}.")
 
             AutoSploitParser().single_run_args(opts, loaded_tokens, loaded_exploits)
         else:
@@ -115,22 +125,23 @@ def main():
             loaded_tokens = load_api_keys()
             terminal = AutoSploitTerminal(loaded_tokens, loaded_exploits)
             terminal.terminal_main_display(loaded_tokens)
+            
     except Exception as e:
         global stop_animation
-
         stop_animation = True
 
-        import traceback
-
         print(
-            "\033[31m[!] AutoSploit has hit an unhandled exception: '{}', "
+            f"\033[31m[!] AutoSploit has hit an unhandled exception: '{e}', "
             "in order for the developers to troubleshoot and repair the "
             "issue AutoSploit will need to gather your OS information, "
             "current arguments, the error message, and a traceback. "
-            "None of this information can be used to identify you in any way\033[0m".format(str(e))
+            "None of this information can be used to identify you in any way\033[0m"
         )
         error_traceback = ''.join(traceback.format_tb(sys.exc_info()[2]))
-        error_class = str(e.__class__).split(" ")[1].split(".")[1].strip(">").strip("'")
+        try:
+            error_class = str(e.__class__).split(" ")[1].split(".")[1].strip(">").strip("'")
+        except IndexError:
+            error_class = str(e.__class__).split("'")[1] if "'" in str(e.__class__) else "UnknownError"
         error_file = save_error_to_file(str(error_traceback), str(e), error_class)
-        print error_traceback
+        print(error_traceback)
         # request_issue_creation(error_file, hide_sensitive(), str(e))

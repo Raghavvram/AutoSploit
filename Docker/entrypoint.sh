@@ -1,7 +1,14 @@
 #!/bin/bash
 
-/etc/init.d/postgresql start
-/etc/init.d/apache2 start
+# Start services
+service postgresql start
+service apache2 start
+
+# Change to AutoSploit directory
 cd AutoSploit/
 
-python autosploit.py
+# Set permissions
+chmod +x autosploit.py
+
+# Run AutoSploit with Python 3
+python3 autosploit.py

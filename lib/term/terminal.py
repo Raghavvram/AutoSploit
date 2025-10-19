@@ -1,6 +1,14 @@
+#!/usr/bin/env python3
+"""
+AutoSploit Terminal Module
+Modernized for Python 3.12
+"""
+
 import os
 import json
 import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
 import lib.banner
 import lib.settings
@@ -11,17 +19,10 @@ import api_calls.shodan
 import api_calls.zoomeye
 import api_calls.censys
 import lib.exploitation.exploiter
-try:
-    raw_input
-except:
-    input = raw_input
 
 
-class AutoSploitTerminal(object):
-
-    """
-    class object for the main terminal of the program
-    """
+class AutoSploitTerminal:
+    """Class object for the main terminal of the program."""
 
     internal_terminal_commands = [
         # viewing gathered hosts
@@ -60,73 +61,71 @@ class AutoSploitTerminal(object):
         "censys": api_calls.censys.CensysAPIHook
     }
 
-    def __init__(self, tokens, modules):
-        self.history = []
+    def __init__(self, tokens: Dict[str, Tuple[str, ...]], modules: List[str]):
+        self.history: List[str] = []
         self.quit_terminal = False
         self.tokens = tokens
-        self.history_dir = "{}/{}".format(lib.settings.HISTORY_FILE_PATH, datetime.date.today())
-        self.full_history_path = "{}/autosploit.history".format(self.history_dir)
+        self.history_dir = str(Path(lib.settings.HISTORY_FILE_PATH) / str(datetime.date.today()))
+        self.full_history_path = str(Path(self.history_dir) / "autosploit.history")
         self.modules = modules
         try:
-            self.loaded_hosts = open(lib.settings.HOST_FILE).readlines()
+            with open(lib.settings.HOST_FILE, 'r', encoding='utf-8') as f:
+                self.loaded_hosts = f.readlines()
         except (IOError, Exception):
             lib.output.warning("no hosts file present")
-            self.loaded_hosts = open(lib.settings.HOST_FILE, "a+").readlines()
+            Path(lib.settings.HOST_FILE).touch()
+            with open(lib.settings.HOST_FILE, 'r', encoding='utf-8') as f:
+                self.loaded_hosts = f.readlines()
 
-    def __reload(self):
-        self.loaded_hosts = open(lib.settings.HOST_FILE).readlines()
+    def __reload(self) -> None:
+        """Reload the hosts file."""
+        with open(lib.settings.HOST_FILE, 'r', encoding='utf-8') as f:
+            self.loaded_hosts = f.readlines()
 
-    def reflect_memory(self, max_memory=100):
-        """
-        reflect the command memory out of the history file
-        """
-        if os.path.exists(self.history_dir):
+    def reflect_memory(self, max_memory: int = 100) -> None:
+        """Reflect the command memory out of the history file."""
+        if Path(self.history_dir).exists():
             tmp = []
             try:
-                with open(self.full_history_path) as history:
+                with open(self.full_history_path, 'r', encoding='utf-8') as history:
                     for item in history.readlines():
                         tmp.append(item.strip())
-            except:
+            except (IOError, Exception):
                 pass
+            
             if len(tmp) == 0:
                 lib.output.warning("currently no history")
             elif len(tmp) > max_memory:
                 import shutil
 
-                history_file_backup_path = "{}.{}.old".format(
-                    self.full_history_path,
-                    lib.jsonize.random_file_name(length=12)
-                )
-                shutil.copy(self.full_history_path, history_file_backup_path)
-                os.remove(self.full_history_path)
-                open(self.full_history_path, 'a+').close()
-                lib.output.misc_info("history file to large, backed up under '{}'".format(history_file_backup_path))
+                history_file_backup_path = f"{self.full_history_path}.{lib.jsonize.random_file_name(length=12)}.old"
+                shutil.copy2(self.full_history_path, history_file_backup_path)
+                Path(self.full_history_path).unlink()
+                Path(self.full_history_path).touch()
+                lib.output.misc_info(f"history file too large, backed up under '{history_file_backup_path}'")
             else:
                 for cmd in tmp:
                     self.history.append(cmd)
 
-    def do_display_history(self):
-        """
-        display the history from the history files
-        """
+    def do_display_history(self) -> None:
+        """Display the history from the history files."""
         for i, item in enumerate(self.history, start=1):
-            if len(list(str(i))) == 2:
+            if len(str(i)) == 2:
                 spacer1, spacer2 = "  ", "   "
-            elif len(list(str(i))) == 3:
+            elif len(str(i)) == 3:
                 spacer1, spacer2 = " ", "   "
             else:
                 spacer1, spacer2 = "   ", "   "
-            print("{}{}{}{}".format(spacer1, i, spacer2, item))
+            print(f"{spacer1}{i}{spacer2}{item}")
 
-    def get_choice(self):
-        """
-        get the provided choice and return a tuple of options and the choice
-        """
-        original_choice = raw_input(lib.settings.AUTOSPLOIT_PROMPT)
+    def get_choice(self) -> Tuple[str, str]:
+        """Get the provided choice and return a tuple of options and the choice."""
+        original_choice = input(lib.settings.AUTOSPLOIT_PROMPT)
         try:
             choice_checker = original_choice.split(" ")[0]
-        except:
+        except IndexError:
             choice_checker = original_choice
+        
         if choice_checker in self.internal_terminal_commands:
             retval = ("internal", original_choice)
         elif choice_checker in self.external_terminal_commands:
@@ -135,47 +134,36 @@ class AutoSploitTerminal(object):
             retval = ("unknown", original_choice)
         return retval
 
-    def do_show_version_number(self):
-        """
-        display the current version number
-        """
-        lib.output.info("your current version number: {}".format(lib.banner.VERSION))
+    def do_show_version_number(self) -> None:
+        """Display the current version number."""
+        lib.output.info(f"your current version number: {lib.banner.VERSION}")
 
-    def do_display_external(self):
-        """
-        display all external commands
-        """
+    def do_display_external(self) -> None:
+        """Display all external commands."""
         print(" ".join(self.external_terminal_commands))
 
-    def do_terminal_command(self, command):
-        """
-        run a terminal command
-        """
+    def do_terminal_command(self, command: str) -> None:
+        """Run a terminal command."""
         lib.settings.cmdline(command, is_msf=False)
 
-    def do_clean_hosts(self):
-        """
-        Clean the hosts.txt file of any duplicate IP addresses
-        """
+    def do_clean_hosts(self) -> None:
+        """Clean the hosts.txt file of any duplicate IP addresses."""
         retval = set()
         current_size = len(self.loaded_hosts)
         for host in self.loaded_hosts:
             retval.add(host)
         cleaned_size = len(retval)
-        with open(lib.settings.HOST_FILE, 'w') as hosts:
-            for item in list(retval):
+        
+        with open(lib.settings.HOST_FILE, 'w', encoding='utf-8') as hosts:
+            for item in retval:
                 hosts.write(item)
+        
         if current_size != cleaned_size:
-            lib.output.info("cleaned {} duplicate IP address(es) (total of {})".format(
-                current_size - cleaned_size, cleaned_size
-            )
-            )
+            lib.output.info(f"cleaned {current_size - cleaned_size} duplicate IP address(es) (total of {cleaned_size})")
         self.__reload()
 
-    def do_token_reset(self, api, token, username):
+    def do_token_reset(self, api: str, token: str, username: Optional[str] = None) -> None:
         """
-        Explanation:
-        ------------
         Reset the API tokens when needed, this will overwrite the existing
         API token with a provided one
 
@@ -190,20 +178,15 @@ class AutoSploitTerminal(object):
         Censys ->  reset/tokens censys <token> <userID>
         Shodan ->  reset.tokens shodan <token>
         """
-        import sys
-
-        if sys.version_info > (3,):
-            token = token.encode("utf-8")
-            username = username.encode("utf-8")
-
         if api.lower() == "censys":
             lib.output.info("resetting censys API credentials")
-            with open(lib.settings.API_KEYS["censys"][0], 'w') as token_:
+            with open(lib.settings.API_KEYS["censys"][0], 'w', encoding='utf-8') as token_:
                 token_.write(token)
-            with open(lib.settings.API_KEYS["censys"][1], 'w') as username_:
-                username_.write(username)
+            if username:
+                with open(lib.settings.API_KEYS["censys"][1], 'w', encoding='utf-8') as username_:
+                    username_.write(username)
         else:
-            with open(lib.settings.API_KEYS["shodan"][0], 'w') as token_:
+            with open(lib.settings.API_KEYS["shodan"][0], 'w', encoding='utf-8') as token_:
                 token_.write(token)
         lib.output.warning("program must be restarted for the new tokens to initialize")
 
@@ -236,7 +219,7 @@ class AutoSploitTerminal(object):
                 query = "".join(query)
             else:
                 query = " ".join(query)
-        except:
+        except (TypeError, AttributeError):
             query = query
 
         if query == "" or query.isspace():
@@ -244,7 +227,7 @@ class AutoSploitTerminal(object):
             return
         try:
             api_list = requested_api_data.split(",")
-        except:
+        except (AttributeError, TypeError):
             api_list = [requested_api_data]
         prompt_for_save = len(open(lib.settings.HOST_FILE).readlines()) != 0
         if prompt_for_save:
@@ -307,22 +290,18 @@ class AutoSploitTerminal(object):
         """
         print(lib.settings.TERMINAL_HELP_MESSAGE)
 
-    def do_view_gathered(self):
-        """
-        view the gathered hosts
-        """
+    def do_view_gathered(self) -> None:
+        """View the gathered hosts."""
         if len(self.loaded_hosts) != 0:
             for host in self.loaded_hosts:
                 lib.output.info(host.strip())
         else:
             lib.output.warning("currently no gathered hosts")
 
-    def do_add_single_host(self, ip):
+    def do_add_single_host(self, ip: str) -> None:
         """
-        Explanation:
-        ------------
         Add a single host by IP address
-        Or a list of single hosts separatedd by a comma
+        Or a list of single hosts separated by a comma
 
         Parameters:
         -----------
@@ -339,22 +318,19 @@ class AutoSploitTerminal(object):
         for item in ip.split(","):
             validated_ip = lib.settings.validate_ip_addr(item)
             if not validated_ip:
-                lib.output.error("provided IP '{}' is invalid, try again".format(ip))
+                lib.output.error(f"provided IP '{ip}' is invalid, try again")
             else:
-                with open(lib.settings.HOST_FILE, "a+") as hosts:
+                with open(lib.settings.HOST_FILE, "a+", encoding='utf-8') as hosts:
                     hosts.write(item + "\n")
-                    lib.output.info("host '{}' saved to hosts file".format(item))
+                    lib.output.info(f"host '{item}' saved to hosts file")
 
-    def do_quit_terminal(self, save_history=True):
-        """
-        quit the terminal and save the command history
-        """
+    def do_quit_terminal(self, save_history: bool = True) -> None:
+        """Quit the terminal and save the command history."""
         self.quit_terminal = True
         if save_history:
-            if not os.path.exists(self.history_dir):
-                os.makedirs(self.history_dir)
+            Path(self.history_dir).mkdir(parents=True, exist_ok=True)
             lib.output.misc_info("saving history")
-            with open(self.full_history_path, "a+") as hist:
+            with open(self.full_history_path, "a+", encoding='utf-8') as hist:
                 for item in self.history:
                     hist.write(item + "\n")
         lib.output.info("exiting terminal session")
@@ -560,7 +536,7 @@ class AutoSploitTerminal(object):
                             choice_data_list = choice.split(" ")
                             if choice_data_list[-1] == "":
                                 choice_data_list = None
-                        except:
+                        except (IndexError, AttributeError):
                             choice_data_list = None
                         if choice == "?" or choice == "help":
                             self.do_display_usage()
@@ -621,7 +597,7 @@ class AutoSploitTerminal(object):
                                             )
                                             try:
                                                 honeyscore = float(honeyscore)
-                                            except:
+                                            except (ValueError, TypeError):
                                                 honeyscore = None
                                                 lib.output.error("honey score must be a float (IE 0.3)")
                                     self.do_exploit_targets(

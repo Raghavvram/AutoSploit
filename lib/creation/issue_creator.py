@@ -45,7 +45,9 @@ def checksum(issue_template_path):
             if not any(c in name for c in file_skips):
                 path = os.path.join(root, name)
                 check = hashlib.md5()
-                check.update(open(path).read())
+                # Read file as bytes for consistent hashing across Python versions
+                with open(path, 'rb') as fh:
+                    check.update(fh.read())
                 check = check.hexdigest()
                 current_checksums.append("{}:{}".format(path.split("/")[-1], check))
     try:
@@ -92,7 +94,7 @@ def create_identifier(data):
     obj = hashlib.sha1()
     try:
         obj.update(data)
-    except:
+    except TypeError:
         obj.update(data.encode("utf-8"))
     return obj.hexdigest()[1:10]
 
@@ -123,7 +125,7 @@ def ensure_no_issue(param):
         try:
             if param.search(req.content) is not None:
                 return True
-        except:
+        except (TypeError, AttributeError):
             content = str(req.content)
             if param.search(content) is not None:
                 return True
@@ -185,7 +187,7 @@ def hide_sensitive():
                     args.pop(item_index)
                     args.insert(item_index, hidden)
                     return ' '.join(args)
-                except:
+                except (ValueError, IndexError):
                     return ' '.join([item for item in sys.argv])
 
 
@@ -203,7 +205,7 @@ def request_issue_creation(path, arguments, error_message):
     #    )
     #    exit(1)
 
-    question = raw_input(
+    question = input(
         "do you want to create an anonymized issue?[y/N]: "
     )
     if question.lower().startswith("y"):
@@ -257,7 +259,7 @@ def request_issue_creation(path, arguments, error_message):
                 )
             try:
                 os.remove(path)
-            except:
+            except (OSError, FileNotFoundError):
                 pass
         else:
             sep = "-" * 35

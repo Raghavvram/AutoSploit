@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+"""
+AutoSploit Settings Module
+Modernized for Python 3.12
+"""
+
 import os
 import re
 import sys
@@ -7,31 +13,35 @@ import random
 import platform
 import getpass
 import tempfile
-import readline
-import distutils.spawn
-from subprocess import (
-    PIPE,
-    Popen
-)
+import shutil
+import threading
+from pathlib import Path
+from subprocess import PIPE, Popen
+from typing import Dict, List, Optional, Tuple, Union
 
 import psutil
 
-import lib.output
-import lib.banner
-import lib.jsonize
+# Import local modules
+try:
+    import lib.output as lib_output
+    import lib.banner as lib_banner
+    import lib.jsonize as lib_jsonize
+except ImportError:
+    # Handle relative imports
+    from . import output as lib_output
+    from . import banner as lib_banner
+    from . import jsonize as lib_jsonize
 
 
-class AutoSploitCompleter(object):
+class AutoSploitCompleter:
+    """Auto completer for the terminal interface."""
 
-    """
-    object to create an auto completer for the terminal
-    """
-
-    def __init__(self, opts):
+    def __init__(self, opts: List[str]):
         self.opts = sorted(opts)
-        self.possibles = []
+        self.possibles: List[str] = []
 
-    def complete_text(self, text, state):
+    def complete_text(self, text: str, state: int) -> Optional[str]:
+        """Complete text based on available options."""
         if state == 0:
             if text:
                 self.possibles = [m for m in self.opts if m.startswith(text)]
@@ -60,78 +70,83 @@ clean/clear             Clean the hosts.txt file of duplicate IP addresses
 help/?                  Display this help
 """
 
-# current directory
-CUR_DIR = "{}".format(os.getcwd())
+# Current directory
+CUR_DIR = str(Path.cwd())
 
-# home
-HOME = "{}/.autosploit_home".format(os.path.expanduser("~"))
+# Home directory
+HOME = str(Path.home() / ".autosploit_home")
 
-# backup the current hosts file
-HOST_FILE_BACKUP = "{}/backups".format(HOME)
+# Backup the current hosts file
+HOST_FILE_BACKUP = str(Path(HOME) / "backups")
 
-# autosploit command history file path
-HISTORY_FILE_PATH = "{}/.history".format(HOME)
+# AutoSploit command history file path
+HISTORY_FILE_PATH = str(Path(HOME) / ".history")
 
-# we'll save the scans xml output for future use
-NMAP_XML_OUTPUT_BACKUP = "{}/nmap_scans/xml".format(HOME)
+# Save the scans XML output for future use
+NMAP_XML_OUTPUT_BACKUP = str(Path(HOME) / "nmap_scans" / "xml")
 
-# we'll dump the generated dict data into JSON and save it into a file
-NMAP_JSON_OUTPUT_BACKUP = "{}/nmap_scans/json".format(HOME)
+# Dump the generated dict data into JSON and save it into a file
+NMAP_JSON_OUTPUT_BACKUP = str(Path(HOME) / "nmap_scans" / "json")
 
-# regex to discover errors or warnings
-NMAP_ERROR_REGEX_WARNING = re.compile("^warning: .*", re.IGNORECASE)
+# Regex to discover errors or warnings
+NMAP_ERROR_REGEX_WARNING = re.compile(r"^warning: .*", re.IGNORECASE)
 
-# possible options in nmap
-NMAP_OPTIONS_PATH = "{}/etc/text_files/nmap_opts.lst".format(CUR_DIR)
+# Possible options in nmap
+NMAP_OPTIONS_PATH = str(Path(CUR_DIR) / "etc" / "text_files" / "nmap_opts.lst")
 
-# possible paths for nmap
+# Possible paths for nmap
 NMAP_POSSIBLE_PATHS = (
     'nmap', '/usr/bin/nmap', '/usr/local/bin/nmap', '/sw/bin/nmap', '/opt/local/bin/nmap'
 )
 
-# link to the checksums
-CHECKSUM_LINK = open("{}/etc/text_files/checksum_link.txt".format(CUR_DIR)).read()
-
-# path to the file containing all the discovered hosts
-HOST_FILE = "{}/hosts.txt".format(CUR_DIR)
+# Link to the checksums
 try:
-    open(HOST_FILE).close()
-except:
-    open(HOST_FILE, "a+").close()
+    with open(str(Path(CUR_DIR) / "etc" / "text_files" / "checksum_link.txt"), 'r') as f:
+        CHECKSUM_LINK = f.read().strip()
+except FileNotFoundError:
+    CHECKSUM_LINK = ""
 
-# path to the folder containing all the JSON exploit modules
-EXPLOIT_FILES_PATH = "{}/etc/json".format(CUR_DIR)
+# Path to the file containing all the discovered hosts
+HOST_FILE = str(Path(CUR_DIR) / "hosts.txt")
+Path(HOST_FILE).touch(exist_ok=True)
 
-# path to the usage and legal file
-USAGE_AND_LEGAL_PATH = "{}/etc/text_files/general".format(CUR_DIR)
+# Path to the folder containing all the JSON exploit modules
+EXPLOIT_FILES_PATH = str(Path(CUR_DIR) / "etc" / "json")
 
-# one bash script to rule them all takes an argument via the operating system
-START_SERVICES_PATH = "{}/etc/scripts/start_services.sh".format(CUR_DIR)
+# Path to the usage and legal file
+USAGE_AND_LEGAL_PATH = str(Path(CUR_DIR) / "etc" / "text_files" / "general")
 
-# path where we will keep the rc scripts
-RC_SCRIPTS_PATH = "{}/autosploit_out/".format(HOME)
+# One bash script to rule them all takes an argument via the operating system
+START_SERVICES_PATH = str(Path(CUR_DIR) / "etc" / "scripts" / "start_services.sh")
 
-# path to the file that will contain our query
+# Path where we will keep the rc scripts
+RC_SCRIPTS_PATH = str(Path(HOME) / "autosploit_out")
+
+# Path to the file that will contain our query
 QUERY_FILE_PATH = tempfile.NamedTemporaryFile(delete=False).name
 
-# default HTTP User-Agent
-DEFAULT_USER_AGENT = "AutoSploit/{} (Language=Python/{}; Platform={})".format(
-    lib.banner.VERSION, sys.version.split(" ")[0], platform.platform().split("-")[0]
-)
+# Default HTTP User-Agent
+try:
+    DEFAULT_USER_AGENT = f"AutoSploit/{lib_banner.VERSION} (Language=Python/{sys.version.split(' ')[0]}; Platform={platform.platform().split('-')[0]})"
+except (AttributeError, ImportError, NameError):
+    DEFAULT_USER_AGENT = f"AutoSploit/4.0 (Language=Python/{sys.version.split(' ')[0]}; Platform={platform.platform().split('-')[0]})"
 
-# the prompt for the platforms
-PLATFORM_PROMPT = "\n{}@\033[36mPLATFORM\033[0m$ ".format(getpass.getuser())
+# The prompt for the platforms
+PLATFORM_PROMPT = f"\n{getpass.getuser()}@\033[36mPLATFORM\033[0m$ "
 
-# the prompt that will be used most of the time
-AUTOSPLOIT_PROMPT = "\033[31m{}\033[0m@\033[36mautosploit\033[0m# ".format(getpass.getuser())
+# The prompt that will be used most of the time
+AUTOSPLOIT_PROMPT = f"\033[31m{getpass.getuser()}\033[0m@\033[36mautosploit\033[0m# "
 
-# all the paths to the API tokens
+# All the paths to the API tokens
 API_KEYS = {
-    "censys": ("{}/etc/tokens/censys.key".format(CUR_DIR), "{}/etc/tokens/censys.id".format(CUR_DIR)),
-    "shodan": ("{}/etc/tokens/shodan.key".format(CUR_DIR), )
+    "censys": (
+        str(Path(CUR_DIR) / "etc" / "tokens" / "censys.key"),
+        str(Path(CUR_DIR) / "etc" / "tokens" / "censys.id")
+    ),
+    "shodan": (str(Path(CUR_DIR) / "etc" / "tokens" / "shodan.key"),)
 }
 
-# all the URLs that we will use while doing the searching
+# All the URLs that we will use while doing the searching
 API_URLS = {
     "shodan": "https://api.shodan.io/shodan/host/search?key={token}&query={query}",
     "censys": "https://censys.io/api/v1/search/ipv4",
@@ -141,276 +156,255 @@ API_URLS = {
     )
 }
 
-# has msf been launched?
+# Has MSF been launched?
 MSF_LAUNCHED = False
 
-# token path for issue requests
-TOKEN_PATH = "{}/etc/text_files/auth.key".format(CUR_DIR)
+# Token path for issue requests
+TOKEN_PATH = str(Path(CUR_DIR) / "etc" / "text_files" / "auth.key")
 
-# location of error files
-ERROR_FILES_LOCATION = "{}/.autosploit_errors".format(HOME)
+# Location of error files
+ERROR_FILES_LOCATION = str(Path(HOME) / ".autosploit_errors")
 
-# terminal options
+# Terminal options
 AUTOSPLOIT_TERM_OPTS = {
     1: "usage and legal", 2: "gather hosts", 3: "custom hosts",
     4: "add single host", 5: "view gathered hosts", 6: "exploit gathered hosts",
     99: "quit"
 }
 
-# global variable for the search animation
+# Global variable for the search animation
 stop_animation = False
 
 
-def load_external_commands():
-    """
-    create a list of external commands from provided directories
-    """
+def load_external_commands() -> List[str]:
+    """Create a list of external commands from provided directories."""
     paths = ["/bin", "/usr/bin"]
     loaded_externals = []
-    for f in paths:
-        for cmd in os.listdir(f):
-            if not os.path.isdir("{}/{}".format(f, cmd)):
-                loaded_externals.append(cmd)
+    for path_dir in paths:
+        try:
+            for cmd in os.listdir(path_dir):
+                cmd_path = Path(path_dir) / cmd
+                if cmd_path.is_file() and os.access(cmd_path, os.X_OK):
+                    loaded_externals.append(cmd)
+        except (OSError, PermissionError):
+            continue
     return loaded_externals
 
 
-def backup_host_file(current, path):
-    """
-    backup the current hosts file
-    """
+def backup_host_file(current: str, path: str) -> str:
+    """Backup the current hosts file."""
     import datetime
-    import shutil
-
-    if not os.path.exists(path):
-        os.makedirs(path)
-    new_filename = "{}/hosts_{}_{}.txt".format(
-        path,
-        lib.jsonize.random_file_name(length=22),
-        str(datetime.datetime.today()).split(" ")[0]
-    )
-    shutil.copyfile(current, new_filename)
+    
+    Path(path).mkdir(parents=True, exist_ok=True)
+    new_filename = str(Path(path) / f"hosts_{lib_jsonize.random_file_name(length=22)}_{datetime.date.today()}.txt")
+    shutil.copy2(current, new_filename)
     return new_filename
 
 
-def auto_completer(keywords):
-    """
-    function to initialize the auto complete utility
-    """
-    completer = AutoSploitCompleter(keywords)
-    readline.set_completer(completer.complete_text)
-    readline.parse_and_bind('tab: complete')
+def auto_completer(keywords: List[str]) -> None:
+    """Initialize the auto complete utility."""
+    try:
+        import readline
+        completer = AutoSploitCompleter(keywords)
+        readline.set_completer(completer.complete_text)
+        readline.parse_and_bind('tab: complete')
+    except ImportError:
+        # readline not available on this platform
+        pass
 
 
-def validate_ip_addr(provided, home_ok=False):
-    """
-    validate an IP address to see if it is real or not
-    """
+def validate_ip_addr(provided: str, home_ok: bool = False) -> bool:
+    """Validate an IP address to see if it is real or not."""
     if not home_ok:
         not_acceptable = ("0.0.0.0", "127.0.0.1", "255.255.255.255")
     else:
         not_acceptable = ("255.255.255.255",)
+    
     if provided not in not_acceptable:
         try:
             socket.inet_aton(provided)
             return True
-        except:
+        except OSError:
             return False
     return False
 
 
-def check_services(service_name):
-    """
-    check to see if certain services ar started
-    """
+def check_services(service_name: str) -> bool:
+    """Check to see if certain services are started."""
     try:
         all_processes = set()
         for pid in psutil.pids():
-            running_proc = psutil.Process(pid)
-            all_processes.add(" ".join(running_proc.cmdline()).strip())
-        for proc in list(all_processes):
+            try:
+                running_proc = psutil.Process(pid)
+                all_processes.add(" ".join(running_proc.cmdline()).strip())
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        for proc in all_processes:
             if service_name in proc:
                 return True
         return False
     except psutil.ZombieProcess as e:
-        # zombie processes appear to happen on macOS for some reason
+        # Zombie processes appear to happen on macOS for some reason
         # so we'll just kill them off
-        pid = str(e).split("=")[-1].split(")")[0]
-        os.kill(int(pid), 0)
+        try:
+            pid = str(e).split("=")[-1].split(")")[0]
+            os.kill(int(pid), 0)
+        except (ValueError, OSError):
+            pass
         return True
 
 
-def write_to_file(data_to_write, filename, mode=None):
-    """
-    write data to a specified file, if it exists, ask to overwrite
-    """
+def write_to_file(data_to_write: Union[str, list, set, tuple], filename: str, mode: Optional[str] = None) -> str:
+    """Write data to a specified file, if it exists, ask to overwrite."""
     global stop_animation
 
-    if os.path.exists(filename):
+    if Path(filename).exists():
         if not mode:
             stop_animation = True
-            is_append = lib.output.prompt("would you like to (a)ppend or (o)verwrite the file")
+            is_append = lib_output.prompt("would you like to (a)ppend or (o)verwrite the file")
             if is_append.lower() == "o":
                 mode = "w"
             elif is_append.lower() == "a":
                 mode = "a+"
             else:
-                lib.output.error("invalid input provided ('{}'), appending to file".format(is_append))
-                lib.output.error("Search results NOT SAVED!")
+                lib_output.error(f"invalid input provided ('{is_append}'), appending to file")
+                lib_output.error("Search results NOT SAVED!")
 
         if mode == "w":
-            lib.output.warning("Overwriting to {}".format(filename))
+            lib_output.warning(f"Overwriting to {filename}")
         if mode == "a":
-            lib.output.info("Appending to {}".format(filename))
-
+            lib_output.info(f"Appending to {filename}")
     else:
-        # File does not exists, mode does not matter
+        # File does not exist, mode does not matter
         mode = "w"
 
-    with open(filename, mode) as log:
+    with open(filename, mode, encoding='utf-8') as log:
         if isinstance(data_to_write, (tuple, set, list)):
-            for item in list(data_to_write):
-                log.write("{}{}".format(item.strip(), os.linesep))
+            for item in data_to_write:
+                log.write(f"{str(item).strip()}{os.linesep}")
         else:
-            log.write(data_to_write)
-    lib.output.info("successfully wrote info to '{}'".format(filename))
+            log.write(str(data_to_write))
+    
+    lib_output.info(f"successfully wrote info to '{filename}'")
     return filename
 
 
-def load_api_keys(unattended=False, path="{}/etc/tokens".format(CUR_DIR)):
+def load_api_keys(unattended: bool = False, path: Optional[str] = None) -> Dict[str, Tuple[str, ...]]:
+    """Load the API keys from their .key files."""
+    if path is None:
+        path = str(Path(CUR_DIR) / "etc" / "tokens")
 
-    """
-    load the API keys from their .key files
-    """
-
-    # make the directory if it does not exist
-    if not os.path.exists(path):
-        os.mkdir(path)
+    # Make the directory if it does not exist
+    Path(path).mkdir(parents=True, exist_ok=True)
 
     for key in API_KEYS.keys():
-        if not os.path.isfile(API_KEYS[key][0]):
-            access_token = lib.output.prompt("enter your {} API token".format(key.title()), lowercase=False)
+        if not Path(API_KEYS[key][0]).is_file():
+            access_token = lib_output.prompt(f"enter your {key.title()} API token", lowercase=False)
             if key.lower() == "censys":
-                identity = lib.output.prompt("enter your {} ID".format(key.title()), lowercase=False)
-                with open(API_KEYS[key][1], "a+") as log:
+                identity = lib_output.prompt(f"enter your {key.title()} ID", lowercase=False)
+                with open(API_KEYS[key][1], "a+", encoding='utf-8') as log:
                     log.write(identity)
-            with open(API_KEYS[key][0], "a+") as log:
+            with open(API_KEYS[key][0], "a+", encoding='utf-8') as log:
                 log.write(access_token.strip())
         else:
-            lib.output.info("{} API token loaded from {}".format(key.title(), API_KEYS[key][0]))
+            lib_output.info(f"{key.title()} API token loaded from {API_KEYS[key][0]}")
+    
     api_tokens = {
-        "censys": (open(API_KEYS["censys"][0]).read().rstrip(), open(API_KEYS["censys"][1]).read().rstrip()),
-        "shodan": (open(API_KEYS["shodan"][0]).read().rstrip(), )
+        "censys": (
+            Path(API_KEYS["censys"][0]).read_text(encoding='utf-8').rstrip(),
+            Path(API_KEYS["censys"][1]).read_text(encoding='utf-8').rstrip()
+        ),
+        "shodan": (Path(API_KEYS["shodan"][0]).read_text(encoding='utf-8').rstrip(),)
     }
     return api_tokens
 
 
-def cmdline(command, is_msf=True):
-    """
-    send the commands through subprocess
-    """
-
-    lib.output.info("Executing command '{}'".format(command.strip()))
+def cmdline(command: str, is_msf: bool = True) -> List[str]:
+    """Send the commands through subprocess."""
+    lib_output.info(f"Executing command '{command.strip()}'")
     split_cmd = [x.strip() for x in command.split(" ") if x]
 
     sys.stdout.flush()
     stdout_buff = []
 
     try:
-       proc = Popen(split_cmd, stdout=PIPE, bufsize=1)
-       for stdout_line in iter(proc.stdout.readline, b''):
-           stdout_buff += [stdout_line.rstrip()]
-           if is_msf:
-               print("(msf)>> {}".format(stdout_line).rstrip())
-           else:
-               print("{}".format(stdout_line).rstrip())
+        proc = Popen(split_cmd, stdout=PIPE, bufsize=1, text=True)
+        for stdout_line in iter(proc.stdout.readline, ''):
+            stdout_buff.append(stdout_line.rstrip())
+            if is_msf:
+                print(f"(msf)>> {stdout_line.rstrip()}")
+            else:
+                print(stdout_line.rstrip())
     except OSError as e:
-        stdout_buff += "ERROR: " + str(e)
+        stdout_buff.append(f"ERROR: {e}")
 
     return stdout_buff
 
 
-def check_for_msf():
-    """
-    check the ENV PATH for msfconsole
-    """
-    return os.getenv("msfconsole", False) or distutils.spawn.find_executable("msfconsole")
+def check_for_msf() -> Optional[str]:
+    """Check the ENV PATH for msfconsole."""
+    import shutil
+    return os.getenv("msfconsole") or shutil.which("msfconsole")
 
 
-def logo():
-    """
-    display a random banner from the banner.py file
-    """
-    print(lib.banner.banner_main())
+def logo() -> None:
+    """Display a random banner from the banner.py file."""
+    print(lib_banner.banner_main())
 
 
-def animation(text):
-    """
-    display an animation while working, this will be
-    single threaded so that it will not screw with the
-    current running process
-    """
+def animation(text: str) -> None:
+    """Display an animation while working, single threaded."""
     global stop_animation
     i = 0
     while not stop_animation:
-        """
-        if stop_animation is True:
-            print("\n")
-        """
         temp_text = list(text)
         if i >= len(temp_text):
             i = 0
         temp_text[i] = temp_text[i].upper()
         temp_text = ''.join(temp_text)
-        sys.stdout.write("\033[96m\033[1m{}...\r\033[0m".format(temp_text))
+        sys.stdout.write(f"\033[96m\033[1m{temp_text}...\r\033[0m")
         sys.stdout.flush()
         i += 1
         time.sleep(0.1)
 
 
-def start_animation(text):
-    """
-    start the animation until stop_animation is False
-    """
+def start_animation(text: str) -> None:
+    """Start the animation until stop_animation is False."""
     global stop_animation
 
     if not stop_animation:
-        import threading
-
-        t = threading.Thread(target=animation, args=(text,))
-        t.daemon = True
+        t = threading.Thread(target=animation, args=(text,), daemon=True)
         t.start()
     else:
-        lib.output.misc_info(text)
+        lib_output.misc_info(text)
 
 
-def close(warning, status=1):
-    """
-    exit if there's an issue
-    """
-    lib.output.error(warning)
+def close(warning: str, status: int = 1) -> None:
+    """Exit if there's an issue."""
+    lib_output.error(warning)
     sys.exit(status)
 
 
-def grab_random_agent():
-    """
-    get a random HTTP User-Agent
-    """
-    user_agent_path = "{}/etc/text_files/agents.txt"
-    with open(user_agent_path.format(CUR_DIR)) as agents:
-        return random.choice(agents.readlines()).strip()
+def grab_random_agent() -> str:
+    """Get a random HTTP User-Agent."""
+    user_agent_path = Path(CUR_DIR) / "etc" / "text_files" / "agents.txt"
+    try:
+        with open(user_agent_path, 'r', encoding='utf-8') as agents:
+            return random.choice(agents.readlines()).strip()
+    except FileNotFoundError:
+        return DEFAULT_USER_AGENT
 
 
-def configure_requests(proxy=None, agent=None, rand_agent=False):
-    """
-    configure the proxy and User-Agent for the requests
-    """
+def configure_requests(proxy: Optional[str] = None, agent: Optional[str] = None, rand_agent: bool = False) -> Tuple[Optional[Dict[str, str]], Dict[str, str]]:
+    """Configure the proxy and User-Agent for the requests."""
     if proxy is not None:
         proxy_dict = {
             "http": proxy,
             "https": proxy,
             "ftp": proxy
         }
-        lib.output.misc_info("setting proxy to: '{}'".format(proxy))
+        lib_output.misc_info(f"setting proxy to: '{proxy}'")
     else:
         proxy_dict = None
 
@@ -418,12 +412,12 @@ def configure_requests(proxy=None, agent=None, rand_agent=False):
         header_dict = {
             "User-Agent": agent
         }
-        lib.output.misc_info("setting HTTP User-Agent to: '{}'".format(agent))
+        lib_output.misc_info(f"setting HTTP User-Agent to: '{agent}'")
     elif rand_agent:
         header_dict = {
             "User-Agent": grab_random_agent()
         }
-        lib.output.misc_info("setting HTTP User-Agent to: '{}'".format(header_dict["User-Agent"]))
+        lib_output.misc_info(f"setting HTTP User-Agent to: '{header_dict['User-Agent']}'")
     else:
         header_dict = {
             "User-Agent": DEFAULT_USER_AGENT
@@ -432,56 +426,50 @@ def configure_requests(proxy=None, agent=None, rand_agent=False):
     return proxy_dict, header_dict
 
 
-def save_error_to_file(error_info, error_message, error_class):
-    """
-    save an error traceback to log file for further use
-    """
-
+def save_error_to_file(error_info: str, error_message: str, error_class: str) -> str:
+    """Save an error traceback to log file for further use."""
     import string
 
-    if not os.path.exists(ERROR_FILES_LOCATION):
-        os.makedirs(ERROR_FILES_LOCATION)
+    Path(ERROR_FILES_LOCATION).mkdir(parents=True, exist_ok=True)
     acceptable = string.ascii_letters
-    filename = []
-    for _ in range(12):
-        filename.append(random.choice(acceptable))
-    filename = ''.join(filename) + "_AS_error.txt"
-    file_path = "{}/{}".format(ERROR_FILES_LOCATION, filename)
-    with open(file_path, "a+") as log:
-        log.write(
-            "Traceback (most recent call):\n " + error_info.strip() + "\n{}: {}".format(error_class, error_message)
-        )
+    filename = ''.join(random.choice(acceptable) for _ in range(12)) + "_AS_error.txt"
+    file_path = str(Path(ERROR_FILES_LOCATION) / filename)
+    
+    with open(file_path, "a+", encoding='utf-8') as log:
+        log.write(f"Traceback (most recent call):\n {error_info.strip()}\n{error_class}: {error_message}")
+    
     return file_path
 
 
-def download_modules(link):
-    """
-    download new module links
-    """
+def download_modules(link: str) -> str:
+    """Download new module links."""
     import re
     import requests
     import tempfile
 
-    lib.output.info('downloading: {}'.format(link))
+    lib_output.info(f'downloading: {link}')
     retval = ""
     req = requests.get(link)
-    content = req.content
+    content = req.text
     split_data = content.split(" ")
-    searcher = re.compile("exploit/\w+/\w+")
-    storage_file = tempfile.NamedTemporaryFile(delete=False)
+    searcher = re.compile(r"exploit/\w+/\w+")
+    storage_file = tempfile.NamedTemporaryFile(delete=False, mode='w', encoding='utf-8')
+    
     for item in split_data:
         if searcher.search(item) is not None:
             retval += item + "\n"
-    with open(storage_file.name, 'a+') as tmp:
-        tmp.write(retval)
+    
+    storage_file.write(retval)
+    storage_file.close()
     return storage_file.name
 
 
-def find_similar(command, internal, external):
-    """
-    find commands similar to the one provided
-    """
+def find_similar(command: str, internal: List[str], external: List[str]) -> List[str]:
+    """Find commands similar to the one provided."""
     retval = []
+    if not command:
+        return retval
+    
     first_char = command[0]
     for inter in internal:
         if inter.startswith(first_char):

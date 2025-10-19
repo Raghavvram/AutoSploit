@@ -7,17 +7,12 @@ import lib.output
 import lib.settings
 
 
-def random_file_name(acceptable=string.ascii_letters, length=7):
+def random_file_name(acceptable: str = string.ascii_letters, length: int = 7) -> str:
     """
-    create a random filename.
-
-     `note: this could potentially cause issues if there
-           a lot of files in the directory`
+    Create a random filename string of exact length using provided alphabet.
+    Ensures length by sampling with replacement instead of using a set.
     """
-    retval = set()
-    for _ in range(length):
-        retval.add(random.choice(acceptable))
-    return ''.join(list(retval))
+    return ''.join(random.choice(acceptable) for _ in range(length))
 
 
 def load_exploit_file(path, node="exploits"):
@@ -54,7 +49,7 @@ def load_exploits(path, node="exploits"):
         while not selected:
             for i, f in enumerate(file_list, start=1):
                 print("{}. '{}'".format(i, f[:-5]))
-            action = raw_input(lib.settings.AUTOSPLOIT_PROMPT)
+            action = input(lib.settings.AUTOSPLOIT_PROMPT)
             try:
                 selected_file = file_list[int(action) - 1]
                 selected = True

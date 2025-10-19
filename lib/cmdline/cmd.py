@@ -1,7 +1,15 @@
+#!/usr/bin/env python3
+"""
+AutoSploit Command Line Parser
+Modernized for Python 3.12
+"""
+
 import os
 import sys
 import random
 import argparse
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
 
 import lib.output
 import lib.jsonize
@@ -13,24 +21,19 @@ import lib.exploitation.exploiter
 
 
 class AutoSploitParser(argparse.ArgumentParser):
+    """Command line argument parser for AutoSploit."""
 
     def __init__(self):
-        super(AutoSploitParser, self).__init__()
+        super().__init__()
 
     @staticmethod
-    def optparser():
-
-        """
-        the options function for our parser, it will put everything into play
-        """
-
+    def optparser() -> argparse.Namespace:
+        """The options function for our parser, it will put everything into play."""
         parser = argparse.ArgumentParser(
             usage="python autosploit.py -c[z|s|a] -q QUERY [-O|A]\n"
-                  "{spacer}[-C WORKSPACE LHOST LPORT] [-e] [--whitewash PATH] [-H]\n"
-                  "{spacer}[--ruby-exec] [--msf-path] PATH [-E EXPLOIT-FILE-PATH]\n"
-                  "{spacer}[--rand-agent] [--proxy PROTO://IP:PORT] [-P AGENT] [-D QUERY,QUERY,..]".format(
-                    spacer=" " * 28
-            )
+                  "                            [-C WORKSPACE LHOST LPORT] [-e] [--whitewash PATH] [-H]\n"
+                  "                            [--ruby-exec] [--msf-path] PATH [-E EXPLOIT-FILE-PATH]\n"
+                  "                            [--rand-agent] [--proxy PROTO://IP:PORT] [-P AGENT] [-D QUERY,QUERY,..]"
         )
         se = parser.add_argument_group("search engines", "possible search engines to use")
         se.add_argument("-c", "--censys", action="store_true", dest="searchCensys",
@@ -84,14 +87,13 @@ class AutoSploitParser(argparse.ArgumentParser):
                           help="only exploit hosts listed in the whitelist file")
         misc.add_argument("-D", "--download", nargs="+", metavar="SEARCH1 SEARCH2 ...", dest="downloadModules",
                           help="download new exploit modules with a provided search flag")
+        misc.add_argument("-v", "--version", action="version", version="AutoSploit 4.0 (Python 3.12 Compatible)")
         opts = parser.parse_args()
         return opts
 
     @staticmethod
-    def parse_provided(opt):
-        """
-        parse the provided arguments to make sure that they are all compatible with one another
-        """
+    def parse_provided(opt: argparse.Namespace) -> None:
+        """Parse the provided arguments to make sure that they are all compatible with one another."""
         parser = any([opt.searchAll, opt.searchZoomeye, opt.searchCensys, opt.searchShodan])
 
         if opt.rubyExecutableNeeded and opt.pathToFramework is None:
@@ -112,7 +114,7 @@ class AutoSploitParser(argparse.ArgumentParser):
         if opt.startExploit and opt.msfConfig is None:
             lib.settings.close(
                 "you must provide the configuration for metasploit in order to start the exploits "
-                "do so by passing the `-C\--config` switch (IE -C default 127.0.0.1 8080). don't be "
+                "do so by passing the `-C/--config` switch (IE -C default 127.0.0.1 8080). don't be "
                 "an idiot and keep in mind that sending connections back to your localhost is "
                 "probably not a good idea"
             )
@@ -123,10 +125,8 @@ class AutoSploitParser(argparse.ArgumentParser):
             )
 
     @staticmethod
-    def single_run_args(opt, keys, loaded_modules):
-        """
-        run the arguments provided
-        """
+    def single_run_args(opt: argparse.Namespace, keys: Dict[str, Tuple[str, ...]], loaded_modules: List[str]) -> None:
+        """Run the arguments provided."""
         api_searches = (
             api_calls.zoomeye.ZoomEyeAPIHook,
             api_calls.shodan.ShodanAPIHook,
@@ -138,39 +138,49 @@ class AutoSploitParser(argparse.ArgumentParser):
         single_search_msg = "using {} as the search engine"
 
         if opt.displayEthics:
-            ethics_file = "{}/etc/text_files/ethics.lst".format(os.getcwd())
-            with open(ethics_file) as ethics:
-                ethic = random.choice(ethics.readlines()).strip()
-                lib.settings.close(
-                    "You should take this ethical lesson into consideration "
-                    "before you continue with the use of this tool:\n\n{}\n".format(ethic))
+            ethics_file = str(Path(os.getcwd()) / "etc" / "text_files" / "ethics.lst")
+            try:
+                with open(ethics_file, 'r', encoding='utf-8') as ethics:
+                    ethic = random.choice(ethics.readlines()).strip()
+                    lib.settings.close(
+                        f"You should take this ethical lesson into consideration "
+                        f"before you continue with the use of this tool:\n\n{ethic}\n"
+                    )
+            except FileNotFoundError:
+                lib.settings.close("Ethics file not found")
         if opt.downloadModules is not None:
             import re
 
             modules_to_download = opt.downloadModules
-            links_list = "{}/etc/text_files/links.txt".format(lib.settings.CUR_DIR)
-            possibles = open(links_list).readlines()
+            links_list = str(Path(lib.settings.CUR_DIR) / "etc" / "text_files" / "links.txt")
+            try:
+                with open(links_list, 'r', encoding='utf-8') as f:
+                    possibles = f.readlines()
+            except FileNotFoundError:
+                lib.output.error("Links file not found")
+                return
+            
             for module in modules_to_download:
-                searcher = re.compile("{}".format(module))
+                searcher = re.compile(module)
                 for link in possibles:
                     if searcher.search(link) is not None:
                         filename = lib.settings.download_modules(link.strip())
-                        download_filename = "{}.json".format(link.split("/")[-1].split(".")[0])
-                        download_path = "{}/etc/json".format(os.getcwd())
+                        download_filename = f"{link.split('/')[-1].split('.')[0]}.json"
+                        download_path = str(Path(os.getcwd()) / "etc" / "json")
                         current_files = os.listdir(download_path)
                         if download_filename not in current_files:
-                            full_path = "{}/{}".format(download_path, download_filename)
+                            full_path = str(Path(download_path) / download_filename)
                             lib.jsonize.text_file_to_dict(filename, filename=full_path)
-                            lib.output.info("downloaded into: {}".format(download_path))
+                            lib.output.info(f"downloaded into: {download_path}")
                         else:
                             lib.output.warning("file already downloaded, skipping")
         if opt.exploitList:
             try:
-                lib.output.info("converting {} to JSON format".format(opt.exploitList))
+                lib.output.info(f"converting {opt.exploitList} to JSON format")
                 done = lib.jsonize.text_file_to_dict(opt.exploitList)
-                lib.output.info("converted successfully and saved under {}".format(done))
+                lib.output.info(f"converted successfully and saved under {done}")
             except IOError as e:
-                lib.output.error("caught IOError '{}' check the file path and try again".format(str(e)))
+                lib.output.error(f"caught IOError '{e}' check the file path and try again")
             sys.exit(0)
 
         search_save_mode = None
@@ -179,12 +189,12 @@ class AutoSploitParser(argparse.ArgumentParser):
             # Set the mode to append afterwards
             # This way, successive searches will start clean without
             # overriding each others.
-            open(lib.settings.HOST_FILE, mode="w").close()
+            Path(lib.settings.HOST_FILE).write_text("", encoding='utf-8')
             search_save_mode = "a"
         elif opt.appendHosts:
             search_save_mode = "a"
 
-        # changed my mind it's not to bad
+        # Search engines
         if opt.searchCensys:
             lib.output.info(single_search_msg.format("Censys"))
             api_searches[2](
@@ -219,7 +229,8 @@ class AutoSploitParser(argparse.ArgumentParser):
                 save_mode=search_save_mode
             ).search()
         if opt.startExploit:
-            hosts = open(lib.settings.HOST_FILE).readlines()
+            with open(lib.settings.HOST_FILE, 'r', encoding='utf-8') as f:
+                hosts = f.readlines()
             if opt.whitelist:
                 hosts = lib.exploitation.exploiter.whitelist_wash(hosts, whitelist_file=opt.whitelist)
             if opt.checkIfHoneypot != 1000:

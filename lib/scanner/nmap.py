@@ -48,10 +48,17 @@ __version__ = '0.6.2'
 __last_modification__ = '2017.01.07'
 """
 
+#!/usr/bin/env python3
+"""
+AutoSploit Nmap Scanner Module
+Modernized for Python 3.12
+"""
+
 import os
 import json
 import subprocess
-
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
 from xml.etree import ElementTree
 
 import lib.jsonize
@@ -60,12 +67,15 @@ import lib.output
 import lib.settings
 
 
-def parse_nmap_args(args):
-    """
-    parse the provided arguments and ask if they aren't in the `known` arguments list
-    """
+def parse_nmap_args(args: List[str]) -> List[str]:
+    """Parse the provided arguments and ask if they aren't in the `known` arguments list."""
     runnable_args = []
-    known_args = [a.strip() for a in open(lib.settings.NMAP_OPTIONS_PATH).readlines()]
+    try:
+        with open(lib.settings.NMAP_OPTIONS_PATH, 'r', encoding='utf-8') as f:
+            known_args = [a.strip() for a in f.readlines()]
+    except FileNotFoundError:
+        known_args = []
+    
     for arg in args:
         if " " in arg:
             tmparg = arg.split(" ")[0]
@@ -75,25 +85,22 @@ def parse_nmap_args(args):
             runnable_args.append(arg)
         else:
             choice = lib.output.prompt(
-                "argument: '{}' is not in the list of 'known' nmap arguments, "
-                "do you want to use it anyways[y/N]".format(arg)
+                f"argument: '{arg}' is not in the list of 'known' nmap arguments, "
+                "do you want to use it anyways[y/N]"
             )
             if choice.lower() == "y":
                 runnable_args.append(tmparg)
     return runnable_args
 
 
-def write_data(host, output, is_xml=True):
-    """
-    dump XML data to a file
-    """
-    if not os.path.exists(lib.settings.NMAP_XML_OUTPUT_BACKUP if is_xml else lib.settings.NMAP_JSON_OUTPUT_BACKUP):
-        os.makedirs(lib.settings.NMAP_XML_OUTPUT_BACKUP if is_xml else lib.settings.NMAP_JSON_OUTPUT_BACKUP)
-    file_path = "{}/{}_{}.{}".format(
-        lib.settings.NMAP_XML_OUTPUT_BACKUP if is_xml else lib.settings.NMAP_JSON_OUTPUT_BACKUP,
-        str(host), lib.jsonize.random_file_name(length=10), "xml" if is_xml else "json"
-    )
-    with open(file_path, 'a+') as results:
+def write_data(host: str, output: str, is_xml: bool = True) -> str:
+    """Dump XML data to a file."""
+    backup_path = lib.settings.NMAP_XML_OUTPUT_BACKUP if is_xml else lib.settings.NMAP_JSON_OUTPUT_BACKUP
+    Path(backup_path).mkdir(parents=True, exist_ok=True)
+    
+    file_path = str(Path(backup_path) / f"{host}_{lib.jsonize.random_file_name(length=10)}.{'xml' if is_xml else 'json'}")
+    
+    with open(file_path, 'a+', encoding='utf-8') as results:
         if is_xml:
             results.write(output)
         else:
@@ -101,10 +108,8 @@ def write_data(host, output, is_xml=True):
     return file_path
 
 
-def find_nmap(search_paths):
-    """
-    check if nmap is on the system
-    """
+def find_nmap(search_paths: Tuple[str, ...]) -> str:
+    """Check if nmap is on the system."""
     for path in search_paths:
         try:
             _ = subprocess.Popen([path, '-V'], bufsize=10000, stdout=subprocess.PIPE, close_fds=True)
@@ -115,12 +120,10 @@ def find_nmap(search_paths):
     raise lib.errors.NmapNotFoundException
 
 
-def do_scan(host, nmap_path, ports=None, arguments=None):
-    """
-    perform the nmap scan
-    """
+def do_scan(host: str, nmap_path: str, ports: Optional[str] = None, arguments: Optional[List[str]] = None) -> Tuple[str, str, str]:
+    """Perform the nmap scan."""
     if arguments is None:
-        arguments = "-sV"
+        arguments = ["-sV"]
     launch_arguments = [
         nmap_path, '-oX', '-', host,
         '-p ' + ports if ports is not None else "",
@@ -129,14 +132,14 @@ def do_scan(host, nmap_path, ports=None, arguments=None):
     for item in launch_arguments:
         if not item == "":
             to_launch.append(item)
-    lib.output.info("launching nmap scan against {} ({})".format(host, " ".join(to_launch)))
+    lib.output.info(f"launching nmap scan against {host} ({' '.join(to_launch)})")
     process = subprocess.Popen(
         launch_arguments, bufsize=10000, stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
     )
     output, error = process.communicate()
-    output_data = bytes.decode(output)
-    nmap_error = bytes.decode(error)
+    output_data = output
+    nmap_error = error
     nmap_error_tracestack = []
     nmap_warn_tracestack = []
     if len(nmap_error) > 0:
@@ -150,10 +153,8 @@ def do_scan(host, nmap_path, ports=None, arguments=None):
     return output_data, "".join(nmap_warn_tracestack), "".join(nmap_error_tracestack)
 
 
-def parse_xml_output(output, warnings, error):
-    """
-    parse the XML data out of the file into a dict
-    """
+def parse_xml_output(output: str, warnings: str, error: str) -> Dict[str, Any]:
+    """Parse the XML data out of the file into a dict."""
     results = {}
     try:
         root = ElementTree.fromstring(output)
@@ -162,15 +163,20 @@ def parse_xml_output(output, warnings, error):
             raise lib.errors.NmapScannerError(error)
         else:
             raise lib.errors.NmapScannerError(output)
+    
+    # Safely get scan stats
+    finished_elem = root.find('runstats/finished')
+    hosts_elem = root.find('runstats/hosts')
+    
     results['nmap_scan'] = {
         'full_command_line': root.get('args'),
         'scan_information': {},
         'scan_stats': {
-            'time_string': root.find('runstats/finished').get('timestr'),
-            'elapsed': root.find('runstats/finished').get('elapsed'),
-            'hosts_up': root.find('runstats/hosts').get('up'),
-            'down_hosts': root.find('runstats/hosts').get('down'),
-            'total_hosts_scanned': root.find('runstats/hosts').get('total')
+            'time_string': finished_elem.get('timestr') if finished_elem is not None else '',
+            'elapsed': finished_elem.get('elapsed') if finished_elem is not None else '',
+            'hosts_up': hosts_elem.get('up') if hosts_elem is not None else '',
+            'down_hosts': hosts_elem.get('down') if hosts_elem is not None else '',
+            'total_hosts_scanned': hosts_elem.get('total') if hosts_elem is not None else ''
         }
     }
     if len(error) != 0:

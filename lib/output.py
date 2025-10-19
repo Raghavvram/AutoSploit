@@ -7,7 +7,7 @@ def info(text):
 
 
 def prompt(text, lowercase=True):
-    question = raw_input(
+    question = input(
         "[\033[1m\033[36m?\033[0m] {}: ".format(
             text
         )
