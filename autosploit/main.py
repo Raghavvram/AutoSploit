@@ -136,6 +136,6 @@ def main():
             error_class = e.__class__.__name__
         except IndexError:
             error_class = str(e.__class__).split("'")[1] if "'" in str(e.__class__) else "UnknownError"
-        error_file = save_error_to_file(str(error_traceback), str(e), error_class)
+        save_error_to_file(str(error_traceback), str(e), error_class)
         print(error_traceback)
         # request_issue_creation(error_file, hide_sensitive(), str(e))

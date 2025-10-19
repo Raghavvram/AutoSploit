@@ -211,7 +211,6 @@ def request_issue_creation(path, arguments, error_message):
     if question.lower().startswith("y"):
         if check_version_number(lib.banner.VERSION):
             # gonna read a chunk of it instead of one line
-            chunk = 4096
             with open(path) as data:
                 identifier = create_identifier(error_message)
                 # gotta seek to the beginning of the file since it's already been read `4096` into it

@@ -1,3 +1,15 @@
+#!/usr/bin/env python3
+import os
+import json
+import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Any
+from xml.etree import ElementTree
+
+import lib.jsonize
+import lib.errors
+import lib.output
+import lib.settings
 """
 
 *********************************************************************************************
@@ -47,25 +59,10 @@ __author__ = 'Alexandre Norman (norman@xael.org)'
 __version__ = '0.6.2'
 __last_modification__ = '2017.01.07'
 """
-
-#!/usr/bin/env python3
 """
 AutoSploit Nmap Scanner Module
 Modernized for Python 3.12
 """
-
-import os
-import json
-import subprocess
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from xml.etree import ElementTree
-
-import lib.jsonize
-import lib.errors
-import lib.output
-import lib.settings
-
 
 def parse_nmap_args(args: List[str]) -> List[str]:
     """Parse the provided arguments and ask if they aren't in the `known` arguments list."""

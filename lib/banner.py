@@ -18,7 +18,7 @@ def banner_1(line_sep="#--", space=" " * 30):
 def banner_2():
     banner = r"""
 {blue}--+{end} {red}Graffiti the world with exploits{end} {blue}+--{end}
-{blue}--+{end}             __   ____            {blue}+--{end} 
+{blue}--+{end}             __   ____            {blue}+--{end}
 {blue}--+{end}            / _\ / ___)           {blue}+--{end}
 {blue}--+{end}           /    \\___ \           {blue}+--{end}
 {blue}--+{end}           \_/\_/(____/           {blue}+--{end}
@@ -34,24 +34,24 @@ def banner_2():
 def banner_3():
     banner = r'''#SploitaSaurusRex{green}
                                            O_  RAWR!!
-                                          /  > 
+                                          /  >
                                         -  >  ^\
-                                      /   >  ^ /   
-                                    (O)  >  ^ /   / / /  
+                                      /   >  ^ /
+                                    (O)  >  ^ /   / / /
        _____                        |            \\|//
       /  __ \                      _/      /     / _/
      /  /  | |                    /       /     / /
-   _/  |___/ /                   /      ------_/ / 
+   _/  |___/ /                   /      ------_/ /
  ==_|  \____/                 _/       /  ______/
      \   \                 __/           |\
-      |   \_          ____/              / \      _                    
+      |   \_          ____/              / \      _
        \    \________/                  |\  \----/_V
         \_                              / \_______ V
           \__                /       \ /          V
              \               \        \
               \______         \_       \
-                     \__________\_      \ 
-                        /    /    \_    | 
+                     \__________\_      \
+                        /    /    \_    |
                        |   _/       \   |
                       /  _/          \  |
                      |  /            |  |
@@ -79,7 +79,7 @@ def banner_4():
 
 {blue}--------The Nuclear Option--------{end}
 {blue}-----+       v({red}{vnum}{end}{blue}){spacer}+-----{end}
-{blue}-----------NullArray/Eku----------{end}	  
+{blue}-----------NullArray/Eku----------{end}
 {blue}__________________________________{end}
     """.format(vnum=VERSION, blue="\033[36m", red="\033[31m", end="\033[0m",
                spacer=" " * 9 if len(VERSION) == 3 else " " * 7)

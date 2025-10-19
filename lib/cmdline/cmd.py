@@ -44,7 +44,7 @@ class AutoSploitParser(argparse.ArgumentParser):
     A U T O S P L O I T
     {Colors.END}
     {Colors.YELLOW}Automated Mass Exploiter{Colors.END}
-    
+
     {Colors.CYAN}Authors: {Colors.PURPLE}Ioannis Koutsaftis{Colors.END}, {Colors.PURPLE}Evangelos Mourikis{Colors.END}, {Colors.PURPLE}Paul Hatleskog{Colors.END}
     {Colors.CYAN}Github: {Colors.BLUE}https://github.com/NullArray/AutoSploit{Colors.END}
 """,
@@ -52,10 +52,10 @@ class AutoSploitParser(argparse.ArgumentParser):
             epilog=f"""{Colors.YELLOW}Examples:{Colors.END}
     {Colors.CYAN}Search for hosts and save them to a file:{Colors.END}
         {Colors.GREEN}python autosploit.py -s -q "port:80" -O{Colors.END}
-        
+
     {Colors.CYAN}Exploit the hosts found in the previous search:{Colors.END}
         {Colors.GREEN}python autosploit.py -e -C default 127.0.0.1 8080{Colors.END}
-        
+
     {Colors.CYAN}Search for hosts and exploit them in one command:{Colors.END}
         {Colors.GREEN}python autosploit.py -s -q "port:80" -O -e -C default 127.0.0.1 8080{Colors.END}
 """
