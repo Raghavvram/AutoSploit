@@ -139,7 +139,7 @@ def main():
         )
         error_traceback = ''.join(traceback.format_tb(sys.exc_info()[2]))
         try:
-            error_class = str(e.__class__).split(" ")[1].split(".")[1].strip(">").strip("'")
+            error_class = e.__class__.__name__
         except IndexError:
             error_class = str(e.__class__).split("'")[1] if "'" in str(e.__class__) else "UnknownError"
         error_file = save_error_to_file(str(error_traceback), str(e), error_class)

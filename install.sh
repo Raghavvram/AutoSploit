@@ -35,8 +35,7 @@ function installDebian () {
     
     # Install Python packages
     echo -e "${GREEN}[+] Installing Python packages...${NC}"
-    python3 -m pip install --upgrade pip
-    python3 -m pip install -r requirements.txt
+    sudo apt-get -y install python3-requests python3-psutil python3-bs4 python3-lxml python3-colorama
     
     # Create necessary directories
     createDirectories;
@@ -53,8 +52,7 @@ function installFedora () {
     
     # Install Python packages
     echo -e "${GREEN}[+] Installing Python packages...${NC}"
-    python3 -m pip install --upgrade pip
-    python3 -m pip install -r requirements.txt
+    sudo dnf -y install python3-requests python3-psutil python3-beautifulsoup4 python3-lxml python3-colorama
     
     # Create necessary directories
     createDirectories;
@@ -157,21 +155,32 @@ function createDirectories () {
 }
 
 function install () {
-    case "$(uname -a)" in
-        *Debian*|*Ubuntu*)
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        if [[ "$ID" == "kali" || "$ID_LIKE" == "debian" ]]; then
             installDebian;
-            ;;
-        *Fedora*)
+        elif [[ "$ID" == "fedora" ]]; then
             installFedora;
-            ;;
-        *Darwin*)
-            installOSX;
-            ;;
-        *)
+        else
             echo -e "${RED}[!] Unable to detect an operating system that is compatible with AutoSploit...${NC}";
             exit 1;
-            ;;
-    esac
+        fi
+    elif [[ "$(uname -a)" == *"Darwin"* ]]; then
+        installOSX;
+    else
+        case "$(uname -a)" in
+            *Debian*|*Ubuntu*)
+                installDebian;
+                ;;
+            *Fedora*)
+                installFedora;
+                ;;
+            *)
+                echo -e "${RED}[!] Unable to detect an operating system that is compatible with AutoSploit...${NC}";
+                exit 1;
+                ;;
+        esac
+    fi
     
     echo "";
     echo -e "${GREEN}[+] Installation completed successfully!${NC}"

@@ -716,7 +716,7 @@ class AutoSploitTerminal:
                     "None of this information can be used to identify you in any way\033[0m".format(str(e))
                 )
                 error_traceback = ''.join(traceback.format_tb(sys.exc_info()[2]))
-                error_class = str(e.__class__).split(" ")[1].split(".")[1].strip(">").strip("'")
+                error_class = e.__class__.__name__
                 error_file = lib.settings.save_error_to_file(str(error_traceback), str(e), error_class)
                 lib.creation.issue_creator.request_issue_creation(error_file, lib.creation.issue_creator.hide_sensitive(), str(e))
                 lib.output.info("continuing terminal session")
