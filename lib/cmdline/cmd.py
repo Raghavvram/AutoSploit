@@ -29,11 +29,36 @@ class AutoSploitParser(argparse.ArgumentParser):
     @staticmethod
     def optparser() -> argparse.Namespace:
         """The options function for our parser, it will put everything into play."""
+        class Colors:
+            RED = "\033[91m"
+            GREEN = "\033[92m"
+            YELLOW = "\033[93m"
+            BLUE = "\033[94m"
+            PURPLE = "\033[95m"
+            CYAN = "\033[96m"
+            END = "\033[0m"
+
         parser = argparse.ArgumentParser(
-            usage="python autosploit.py -c[z|s|a] -q QUERY [-O|A]\n"
-                  "                            [-C WORKSPACE LHOST LPORT] [-e] [--whitewash PATH] [-H]\n"
-                  "                            [--ruby-exec] [--msf-path] PATH [-E EXPLOIT-FILE-PATH]\n"
-                  "                            [--rand-agent] [--proxy PROTO://IP:PORT] [-P AGENT] [-D QUERY,QUERY,..]"
+            formatter_class=argparse.RawTextHelpFormatter,
+            description=f"""{Colors.RED}
+    A U T O S P L O I T
+    {Colors.END}
+    {Colors.YELLOW}Automated Mass Exploiter{Colors.END}
+    
+    {Colors.CYAN}Authors: {Colors.PURPLE}Ioannis Koutsaftis{Colors.END}, {Colors.PURPLE}Evangelos Mourikis{Colors.END}, {Colors.PURPLE}Paul Hatleskog{Colors.END}
+    {Colors.CYAN}Github: {Colors.BLUE}https://github.com/NullArray/AutoSploit{Colors.END}
+""",
+            usage=f"""{Colors.GREEN}python autosploit.py [options]{Colors.END}""",
+            epilog=f"""{Colors.YELLOW}Examples:{Colors.END}
+    {Colors.CYAN}Search for hosts and save them to a file:{Colors.END}
+        {Colors.GREEN}python autosploit.py -s -q "port:80" -O{Colors.END}
+        
+    {Colors.CYAN}Exploit the hosts found in the previous search:{Colors.END}
+        {Colors.GREEN}python autosploit.py -e -C default 127.0.0.1 8080{Colors.END}
+        
+    {Colors.CYAN}Search for hosts and exploit them in one command:{Colors.END}
+        {Colors.GREEN}python autosploit.py -s -q "port:80" -O -e -C default 127.0.0.1 8080{Colors.END}
+"""
         )
         se = parser.add_argument_group("search engines", "possible search engines to use")
         se.add_argument("-c", "--censys", action="store_true", dest="searchCensys",
